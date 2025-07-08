@@ -87,7 +87,7 @@ var
   procedure K_SAVE(ZPOffset: byte registerA; AddrEndLo: byte registerX; AddrEndHi: byte registerY);
   procedure K_CLALL;
   
-  // COMMODORE/X16 IO KERNAL ROUTINES
+  // COMMODORE/X16 SYS KERNAL ROUTINES
   procedure K_IOINIT;
   procedure K_RESTOR;
   procedure K_VECTOR(CF: boolean registerA; VectAddrLo: byte registerX; VectAddrHi: byte registerY);
@@ -428,7 +428,6 @@ begin
   end; 
 end;
 
-
 ///////////////////////////////////////////////////////////
 // COMMODORE/X16 IO KERNAL ROUTINES
 /////////////////////////////////////////////////////////// 
@@ -685,7 +684,7 @@ begin
 end; 
 
 ///////////////////////////////////////////////////////////
-// COMMODORE/X16 IO KERNAL ROUTINES
+// COMMODORE/X16 SYS KERNAL ROUTINES
 ///////////////////////////////////////////////////////////
 
 // Calls IOINIT from assembly. 
@@ -771,7 +770,6 @@ end;
 // Params:
 // -------
 //
-//
 // CF:         If true, sec, else if false, clc
 // MTOPAddrLo: Low byte of address of RAM top
 // MTOPAddrHi: High byte of address of RAM top
@@ -804,7 +802,6 @@ end;
 // 
 // Params:
 // -------
-//
 //
 // CF:         If true, sec, else if false, clc
 // MBOTAddrLo: Low byte of address of RAM bottom
