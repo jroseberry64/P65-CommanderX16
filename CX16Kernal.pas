@@ -1,5 +1,5 @@
 ////////////////////////////////////////////
-// New program created in 7/6/2025}
+// Created 7/6/2025}
 ////////////////////////////////////////////
 {Unit to interface with Commander X16 Kernal assembly routines}
 {$ORG $0801}
@@ -94,13 +94,13 @@ var
   
   // COMMODORE/X16 MEM KERNAL ROUTINES
   procedure K_RAMTAS;
-  procedure K_MEMTOP(CF: boolean registerA; MTOPAddrLo: byte registerX; MTOPAddrHi: byte registerY): word;
-  procedure K_MEMBOT(CF: boolean registerA; MBOTAddrLo: byte registerX; MBOTAddrHi: byte registerY): word;
+  procedure K_MEMTOP(CF: boolean registerA; MTOPAddrLo: byte registerX; MTOPAddrHi: byte registerY);
+  procedure K_MEMBOT(CF: boolean registerA; MBOTAddrLo: byte registerX; MBOTAddrHi: byte registerY);
   
   // COMMODORE/X16 EDITOR KERNAL ROUTINES
   procedure K_CINT;
   procedure K_SCREEN: word;
-  procedure K_PLOT(CF: boolean registerA; PosRow: byte registerX; PosCol: byte registerY): word; 
+  procedure K_PLOT(CF: boolean registerA; PosRow: byte registerX; PosCol: byte registerY); 
   
   // COMMODORE/X16 KBD ROUTINES
   procedure K_SCNKEY;
@@ -229,8 +229,8 @@ begin
     lda #1
     sta CF
   endr:
-    stx K_RetXY
-    sty K_RetXY+1     
+    stx K_RetXY.low
+    sty K_RetXY.high     
   end; 
 
   exit(CF); 
@@ -638,16 +638,14 @@ end;
 // Returns:
 // --------
 //
-// RetXY: Address of highest byte of loaded file
+// K_RetXY: Address of highest byte of loaded file
 //
-procedure K_LOAD(LV: byte registerA; AddrStrtLo: byte registerX; AddrStrtHi: byte registerY): RetXY;
-var
-  FileEnd: RetXY;
+procedure K_LOAD(LV: byte registerA; AddrStrtLo: byte registerX; AddrStrtHi: byte registerY);
 begin
   asm 
     jsr $FFD5
-    stx FileEnd.low
-    sty FileEnd.high 
+    stx K_RetXY.low
+    sty K_RetXY.high 
   end; 
 end; 
 
@@ -781,34 +779,24 @@ end;
 // Returns:
 // --------
 //
-// RetXY:       The combined result of X/Y registers
-//
-// NOTE: I'm open to breaking this into two seperate calls
+// K_RetXY:       The combined result of X/Y registers
 //
 procedure K_MEMTOP(CF: boolean registerA; 
                    MTOPAddrLo: byte registerX; 
-                   MTOPAddrHi: byte registerY): RetXY;
-var RAMTopPtr: RetXY;
+                   MTOPAddrHi: byte registerY);
 begin
   if CF then
     asm 
       sec
       jsr $FF99
-      stx RAMTopPtr.low 
-      sty RAMTopPtr.high 
+      stx K_RetXY.low 
+      sty K_RetXY.high 
     end; 
-    
-    exit(RAMTopPtr);
   else
     asm 
       clc 
       jsr $FF99  
     end; 
-    
-    RAMTopPtr.high := 0;
-    RAMTopPtr.low  := 0;
-    
-    exit(RAMTopPtr);
   end; 
 end; 
  
@@ -825,34 +813,24 @@ end;
 // Returns:
 // --------
 //
-// RetXY:       The combined result of X/Y registers
-//
-// NOTE: I'm open to breaking this into two seperate calls
+// K_RetXY:       The combined result of X/Y registers
 //
 procedure K_MEMBOT(CF: boolean registerA; 
                    MBOTAddrLo: byte registerX; 
-                   MBOTAddrHi: byte registerY): RetXY;
-var RAMBotPtr: RetXY;
+                   MBOTAddrHi: byte registerY);
 begin
   if CF then
     asm 
       sec
       jsr $FF99
-      stx RAMBotPtr.low 
-      sty RAMBotPtr.high 
+      stx K_RetXY.low 
+      sty K_RetXY.high 
     end; 
-    
-    exit(RAMBotPtr);
   else
     asm 
       clc 
       jsr $FF99  
     end; 
-    
-    RAMBotPtr.high := 0;
-    RAMBotPtr.low  := 0;
-    
-    exit(RAMBotPtr);
   end; 
 end; 
 
@@ -906,31 +884,22 @@ end;
 // Returns:
 // --------
 //
-// RetXY:       The combined result of X/Y registers
+// K_RetXY:       The combined result of X/Y registers
 //
-procedure K_PLOT(CF: boolean registerA; PosRow: byte registerX; PosCol: byte registerY): RetXY;   
-var 
-  CursPos: RetXY;
+procedure K_PLOT(CF: boolean registerA; PosRow: byte registerX; PosCol: byte registerY);   
 begin
   if CF then
     asm 
       sec
       jsr $FFF0
-      stx CursPos.low 
-      sty CursPos.high 
+      stx K_RetXY.low 
+      sty K_RetXY.high 
     end; 
-    
-    exit(CursPos);
   else
     asm 
       clc 
       jsr $FFF0 
     end; 
-    
-    CursPos.high := 0;
-    CursPos.low  := 0;
-    
-    exit(CursPos);
   end;
 end;
 
