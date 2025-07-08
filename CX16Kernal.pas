@@ -1,5 +1,16 @@
 ////////////////////////////////////////////
 // Created 7/6/2025}
+//
+// TODO:
+// 1) K_MACPTR, K_CIOUT, and a few other routines
+//    need to be refactored or they won't compile
+//    when you try to invoke them.
+//
+// 2) Determine which (if any) of the commented
+//    out procedure declarations should be added
+//    back or deleted after offering alternative
+//    hand written routines.
+//
 ////////////////////////////////////////////
 {Unit to interface with Commander X16 Kernal assembly routines}
 {$ORG $0801}
@@ -49,6 +60,7 @@ var
   r14: word absolute $1E;
   r15: word absolute $20;
   
+  // TODO: REMOVE THESE
   // Used for multi-byte return Kernal subroutines
   K_RetAXY: RetAXY;
   K_RetXY:  RetXY;
@@ -72,35 +84,36 @@ var
   procedure K_UNTLK;
   
   // COMMODORE/X16 IO KERNAL ROUTINES
-  procedure K_SETMSG(CntrlCode: byte registerA);
-  procedure K_READST: byte;
+  //procedure K_SETMSG(CntrlCode: byte registerA);
+  //procedure K_READST: byte;
   procedure K_SETLFS(LFN: byte registerA; DevNum: byte registerX; Comm: byte registerY);
   procedure K_SETNAM(FNLen: byte registerA; FNAddrLo: byte registerX; FNAddrHi: byte registerY);
-  procedure K_OPEN;
-  procedure K_CLOSE(LF: byte registerA);
-  procedure K_CHKIN(LF: byte registerX): byte;
-  procedure K_CHKOUT(LF: byte registerX): byte;
-  procedure K_CLRCHN;
+  //procedure K_OPEN;
+  //procedure K_CLOSE(LF: byte registerA);
+  //procedure K_CHKIN(LF: byte registerX): byte;
+  //procedure K_CHKOUT(LF: byte registerX): byte;
+  //procedure K_CLRCHN;
   procedure K_CHRIN: char;
   procedure K_CHROUT(Chr: char registerA);
-  procedure K_LOAD(LV: byte registerA; AddrStrtLo: byte registerX; AddrStrtHi: byte registerY);
-  procedure K_SAVE(ZPOffset: byte registerA; AddrEndLo: byte registerX; AddrEndHi: byte registerY);
-  procedure K_CLALL;
+  procedure K_LOAD(LV: byte registerA; AddrStrtLo: byte registerX; AddrStrtHi: byte registerY): RetXY;
+  procedure K_SAVE(ZPOffset: byte registerA; AddrEndLo: byte registerX; AddrEndHi: byte registerY): boolean;
+  //procedure K_CLALL;
   
   // COMMODORE/X16 SYS KERNAL ROUTINES
-  procedure K_IOINIT;
-  procedure K_RESTOR;
-  procedure K_VECTOR(CF: boolean registerA; VectAddrLo: byte registerX; VectAddrHi: byte registerY);
+  //procedure K_IOINIT;
+  //procedure K_RESTOR;
+  //procedure K_VECTOR(CF: boolean registerA; VectAddrLo: byte registerX; VectAddrHi: byte registerY);
   
   // COMMODORE/X16 MEM KERNAL ROUTINES
-  procedure K_RAMTAS;
-  procedure K_MEMTOP(CF: boolean registerA; MTOPAddrLo: byte registerX; MTOPAddrHi: byte registerY);
-  procedure K_MEMBOT(CF: boolean registerA; MBOTAddrLo: byte registerX; MBOTAddrHi: byte registerY);
+  //procedure K_RAMTAS;
+  //procedure K_MEMTOP(CF: boolean registerA; MTOPAddrLo: byte registerX; MTOPAddrHi: byte registerY);
+  //procedure K_MEMBOT(CF: boolean registerA; MBOTAddrLo: byte registerX; MBOTAddrHi: byte registerY);
   
   // COMMODORE/X16 EDITOR KERNAL ROUTINES
   procedure K_CINT;
   procedure K_SCREEN: word;
-  procedure K_PLOT(CF: boolean registerA; PosRow: byte registerX; PosCol: byte registerY); 
+  procedure K_PLOT_Set(PosRow: byte registerX; PosCol: byte registerY);
+  procedure K_PLOT_Get: word; 
   
   // COMMODORE/X16 KBD ROUTINES
   procedure K_SCNKEY;
@@ -108,8 +121,8 @@ var
   procedure K_GETIN: byte;
   
   // COMMODORE/X16 TIME ROUTINES
-  procedure K_SETTIM(MSB: byte registerA; MDB: byte registerX; LSB: byte registerY);
-  procedure K_RDTIM;
+  //procedure K_SETTIM(MSB: byte registerA; MDB: byte registerX; LSB: byte registerY);
+  //procedure K_RDTIM;
   
 implementation
 
@@ -229,8 +242,8 @@ begin
     lda #1
     sta CF
   endr:
-    stx K_RetXY.low
-    sty K_RetXY.high     
+    stx K_RetXY
+    sty K_RetXY+1     
   end; 
 
   exit(CF); 
@@ -298,8 +311,8 @@ begin
     lda #1
     sta CF
   endr:
-    stx K_RetXY.low
-    sty K_RetXY.high
+    stx K_RetXY
+    sty K_RetXY+1
   end; 
   
   exit(CF);  
@@ -637,14 +650,16 @@ end;
 // Returns:
 // --------
 //
-// K_RetXY: Address of highest byte of loaded file
+// RetAddr: Address of highest byte of loaded file
 //
-procedure K_LOAD(LV: byte registerA; AddrStrtLo: byte registerX; AddrStrtHi: byte registerY);
+procedure K_LOAD(LV: byte registerA; AddrStrtLo: byte registerX; AddrStrtHi: byte registerY): RetXY;
+var
+RetAddr: RetXY;
 begin
   asm 
     jsr $FFD5
-    stx K_RetXY.low
-    sty K_RetXY.high 
+    stx RetAddr
+    sty RetAddr 
   end; 
 end; 
 
@@ -660,12 +675,18 @@ end;
 // Returns:
 // --------
 //
-// None.
+// Boolean:      Returns Carry Flag to indicate success or failure
 //
-procedure K_SAVE(ZPOffset: byte registerA; AddrEndLo: byte registerX; AddrEndHi: byte registerY);
+procedure K_SAVE(ZPOffset: byte registerA; AddrEndLo: byte registerX; AddrEndHi: byte registerY): boolean;
 begin
   asm 
     jsr $FFD8
+    bcc retTrue
+    lda #0
+    bcs endr
+  retTrue:
+    lda #$FF
+  endr:
   end; 
 end;
 
@@ -787,8 +808,8 @@ begin
     asm 
       sec
       jsr $FF99
-      stx K_RetXY.low 
-      sty K_RetXY.high 
+      stx K_RetXY 
+      sty K_RetXY+1 
     end; 
   else
     asm 
@@ -820,8 +841,8 @@ begin
     asm 
       sec
       jsr $FF99
-      stx K_RetXY.low 
-      sty K_RetXY.high 
+      stx K_RetXY 
+      sty K_RetXY+1 
     end; 
   else
     asm 
@@ -862,8 +883,8 @@ var
 begin
   asm 
     jsr $FFED
-    stx FmtRC.low 
-    sty FmtRC.high 
+    stx FmtRC 
+    sty FmtRC+1 
   end;
   
   exit(FmtRC); 
@@ -874,30 +895,33 @@ end;
 // Params:
 // -------
 //
-// CF:     If true, sec, else if false, clc
 // PosRow: Row to set screen cursor position to
 // PosCol: Col to set screen cursor position to
 // 
 // Returns:
 // --------
 //
-// K_RetXY:       The combined result of X/Y registers
+// None
 //
-procedure K_PLOT(CF: boolean registerA; PosRow: byte registerX; PosCol: byte registerY);   
+procedure K_PLOT_Set(PosRow: byte registerX; PosCol: byte registerY);   
 begin
-  if CF then
-    asm 
-      sec
-      jsr $FFF0
-      stx K_RetXY.low 
-      sty K_RetXY.high 
-    end; 
-  else
-    asm 
-      clc 
-      jsr $FFF0 
-    end; 
-  end;
+  asm 
+    clc 
+    jsr $FFF0 
+  end; 
+end;
+
+procedure K_PLOT_Get: word;   
+var
+  Ret: RetXY;
+begin
+  asm 
+    sec
+    jsr $FFF0
+    stx Ret
+    sty Ret+1 
+  end; 
+  exit(Ret);
 end;
 
 ///////////////////////////////////////////////////////////
@@ -935,7 +959,7 @@ begin
     lda #0
     beq endr
   retKND:
-    lda #1
+    lda #$FF
   endr:
     sta ZF
   end; 
