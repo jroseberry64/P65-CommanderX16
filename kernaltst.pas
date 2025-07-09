@@ -166,9 +166,17 @@ begin
   K_SETLFS(1, LFN, 255);
   K_SETNAM(TstSaveFileName.length, FileNamePtr.low, FileNamePtr.high);
   
-  ResB := K_SAVE(Load, FileStartPtr.low, FileStartPtr.high);
+  K_LOAD(Load, FileStartPtr.low, FileStartPtr.high);
   
-  exit(ResB);
+  asm
+    bcc noerror
+    lda #0      ; Set ResB false
+    bcs endr
+  noerror:
+    lda #$FF    ; Set ResB true
+  endr:
+    sta ResB
+  end;
 end;
 
 // Tests to make sure TstSaveFile = TstLoadFile 

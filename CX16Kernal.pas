@@ -65,6 +65,12 @@ var
   K_RetAXY: RetAXY;
   K_RetXY:  RetXY;
   
+  // I/O Routines
+  procedure LoadFileFromSD(FileStrtPtr: word; FileEndPtr: word; FileNamePtr: word): boolean;
+  
+  // String helper functions
+  procedure StringLenNT(StrPtr: word): byte;
+  
   // KERNAL HELPER FUNCTIONS
   procedure SetHighBankRAM(Bank: byte registerA);   // Open to renaming these
   procedure ActiveHighBankRAM: byte;
@@ -125,6 +131,62 @@ var
   //procedure K_RDTIM;
   
 implementation
+
+///////////////////////////////////////////////////////////
+// I/O Routines
+///////////////////////////////////////////////////////////
+
+// Does the same as { LOAD "...",8,1 }
+procedure LoadFileFromSD(FileStrtPtr: word; FileEndPtr: word; FileNamePtr: word): boolean;
+const
+  r0Addr:       byte = $02;
+  LFN:          byte = 8;
+  Load:         byte = 0;
+var
+  FileNameLen:  byte;
+  ResB:         boolean;
+begin 
+  FileNameLen := StringLenNT(FileNamePtr);
+  
+  // Setup call to K_SAVE
+  K_SETLFS(1, LFN, 255);
+  K_SETNAM(FileNameLen, FileNamePtr.low, FileNamePtr.high);
+  
+  ResB := K_SAVE(Load, FileStrtPtr.low, FileStrtPtr.high);
+  
+  exit(ResB);
+end;
+
+///////////////////////////////////////////////////////////
+// String helper functions
+/////////////////////////////////////////////////////////// 
+
+// Finds the length of NULL terminated string or 255 if no
+// NULL found.
+procedure StringLenNT(StrPtr: word): byte;
+const
+  r0Addr: byte = $02;
+begin
+  r0.low  := StrPtr.low;
+  r0.high := StrPtr.high;
+  
+  asm
+    ldy #0
+    ldx #0
+  loop:
+    lda (r0Addr),y
+    beq setsum
+    iny 
+    inx 
+    bne loop
+  setsum:
+    txa
+  end;
+end;
+
+///////////////////////////////////////////////////////////
+// KERNAL HELPER FUNCTIONS
+///////////////////////////////////////////////////////////
 
 // Sets the High RAM Bank
 //
