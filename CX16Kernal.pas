@@ -68,7 +68,7 @@ var
   // Screen/Print Functions 
   procedure GoToScreenXY(x: byte registerX; y: byte registerY);
   procedure ClearScreen;
-  procedure PrintStr(StrPtr: word; StrLen: byte registerX);
+  procedure PrintStr(StrPtr: word);
   
   // I/O Functions
   procedure LoadFileFromSD(FileStrtPtr: word; FileNamePtr: word): boolean;
@@ -143,6 +143,18 @@ implementation
 ///////////////////////////////////////////////////////////
 
 // Alias for K_PLOT_set(X,Y)
+// 
+// Params:
+// -------
+//
+// PosRow: Row to set screen cursor position to
+// PosCol: Col to set screen cursor position to
+// 
+// Returns:
+// --------
+//
+// None
+//
 procedure GoToScreenXY(x: byte registerX; y: byte registerY);
 begin
   asm 
@@ -153,6 +165,12 @@ end;
 
 // Uses inline assembly for kernal routine
 // calls
+// 
+// Returns:
+// --------
+//
+// None
+//
 procedure ClearScreen;
 var
   sw, sh, i, j: byte;
@@ -160,7 +178,7 @@ begin
   // Get screen width and height
   // and go to screen coords (0,0)
   asm 
-    jsr $FFED
+    jsr $FFED    ; K_SCREEN
     dex
     stx sw 
     dey
@@ -168,7 +186,7 @@ begin
     ldx #0 
     ldy #0 
     clc 
-    jsr $FFF0 
+    jsr $FFF0    ; K_PLOT
   end;
   
   // Fill screen with ' ' chars
@@ -176,7 +194,7 @@ begin
     for j:=0 to sw do
       asm 
         lda #32
-        jsr $FFD2 
+        jsr $FFD2 ; K_CHROUT
       end; 
     end; 
   end; 
@@ -184,9 +202,20 @@ begin
 end;  
 
 // Print string implementation
-procedure PrintStr(StrPtr: word; StrLen: byte registerX);
+// 
+// Params:
+// -------
+//
+// StrPtr: Pointer to the NULL terminated string
+//
+// Returns:
+// --------
+//
+// None
+//
+procedure PrintStr(StrPtr: word);
 const
-  r0Addr = $0002;
+  r0Addr = $02;
 begin 
   r0 := StrPtr;
   
@@ -209,6 +238,20 @@ end;
 //
 // Does the work for loading files from SD or Disk Drive so
 // we don't duplicate code
+//
+// Params:
+// -------
+//
+// FileStrtPtr: Where to load file to in RAM
+// FileNamePtr: Where the file name string is located in RAM/ROM
+// LFN:         Logical File Number
+//
+// Returns:
+// --------
+//
+// ResB:        Boolean value that contains true if the file loaded,
+//              false if it failed to load.
+//
 procedure LoadFile(FileStrtPtr: word; FileNamePtr: word; LFN: byte): boolean;
 const
   Load:         byte = 0;
@@ -287,6 +330,17 @@ end;
 
 // Finds the length of NULL terminated string or 255 if no
 // NULL character found.
+// 
+// Params:
+// -------
+//
+// StrPtr: Pointer to the NULL terminated string
+//
+// Returns:
+// --------
+//
+// byte:   Length of string. Defaults to 255 if no NULL char found.
+//
 procedure StringLenNT(StrPtr: word): byte;
 const
   r0Addr: byte = $02;

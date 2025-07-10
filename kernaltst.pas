@@ -161,6 +161,9 @@ begin
     exit(false);
   end;
   
+  // If you're wondering why this isn't in an
+  // ELSE block, it's because the compiler will
+  // generate an extra RTS if you don't
   exit(true);
 end;
  
@@ -178,7 +181,7 @@ begin
   if not TestK_PLOT then 
     GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst1FailStr;
-    PrintStr(Ptr, Tst1FailStr.length);
+    PrintStr(Ptr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
@@ -186,7 +189,7 @@ begin
   if not TestK_CHROUT then   
     GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst2FailStr;
-    PrintStr(Ptr, Tst2FailStr.length);
+    PrintStr(Ptr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
@@ -194,7 +197,7 @@ begin
   if not TestK_SAVE then
     GoToScreenXY(NumTstsFailed + 1,0);  
     Ptr := @Tst3FailStr;
-    PrintStr(Ptr, Tst3FailStr.length);
+    PrintStr(Ptr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
@@ -202,7 +205,7 @@ begin
   if not TestK_LOAD then 
     GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst4FailStr;
-    PrintStr(Ptr, Tst4FailStr.length);
+    PrintStr(Ptr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
@@ -210,7 +213,7 @@ begin
   if not TestLoadfEqSavef then 
     GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst5FailStr;
-    PrintStr(Ptr, Tst5FailStr.length);
+    PrintStr(Ptr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
@@ -218,7 +221,7 @@ begin
   if not TestStringLenNT then 
     GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst6FailStr;
-    PrintStr(Ptr, Tst6FailStr.length);
+    PrintStr(Ptr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
@@ -226,7 +229,7 @@ begin
   if AllTestsPassed then
     GoToScreenXY(1,0);
     Ptr := @AllTestsPassStr;
-    PrintStr(Ptr, AllTestsPassStr.length);
+    PrintStr(Ptr);
   end; 
   
   asm 
