@@ -65,10 +65,16 @@ var
   K_RetAXY: RetAXY;
   K_RetXY:  RetXY;
   
-  // I/O Routines
-  procedure LoadFileFromSD(FileStrtPtr: word; FileEndPtr: word; FileNamePtr: word): boolean;
+  // Screen/Print Functions 
+  procedure GoToScreenXY(x: byte registerX; y: byte registerY);
+  procedure ClearScreen;
+  procedure PrintStr(StrPtr: word; StrLen: byte registerX);
   
-  // String helper functions
+  // I/O Functions
+  procedure LoadFileFromSD(FileStrtPtr: word; FileNamePtr: word): boolean;
+  procedure LoadFileFromFDskDrv(FileStrtPtr: word; FileNamePtr: word): boolean;
+  
+  // String Helper Functions
   procedure StringLenNT(StrPtr: word): byte;
   
   // KERNAL HELPER FUNCTIONS
@@ -133,14 +139,78 @@ var
 implementation
 
 ///////////////////////////////////////////////////////////
+// Screen/Print Functions 
+///////////////////////////////////////////////////////////
+
+// Alias for K_PLOT_set(X,Y)
+procedure GoToScreenXY(x: byte registerX; y: byte registerY);
+begin
+  asm 
+    clc 
+    jsr $FFF0 
+  end; 
+end;
+
+// Uses inline assembly for kernal routine
+// calls
+procedure ClearScreen;
+var
+  sw, sh, i, j: byte;
+begin
+  // Get screen width and height
+  // and go to screen coords (0,0)
+  asm 
+    jsr $FFED
+    dex
+    stx sw 
+    dey
+    sty sh      
+    ldx #0 
+    ldy #0 
+    clc 
+    jsr $FFF0 
+  end;
+  
+  // Fill screen with ' ' chars
+  for i:=0 to sh do
+    for j:=0 to sw do
+      asm 
+        lda #32
+        jsr $FFD2 
+      end; 
+    end; 
+  end; 
+  
+end;  
+
+// Print string implementation
+procedure PrintStr(StrPtr: word; StrLen: byte registerX);
+const
+  r0Addr = $0002;
+begin 
+  r0 := StrPtr;
+  
+  asm
+    ldy #0
+  loop:
+    lda (r0Addr),y
+    jsr $FFD2
+    iny 
+    dex 
+    bne loop 
+  end;
+end;
+
+///////////////////////////////////////////////////////////
 // I/O Routines
 ///////////////////////////////////////////////////////////
 
-// Does the same as { LOAD "...",8,1 }
-procedure LoadFileFromSD(FileStrtPtr: word; FileEndPtr: word; FileNamePtr: word): boolean;
+// NOTE: not sure if I should expose this one or not
+//
+// Does the work for loading files from SD or Disk Drive so
+// we don't duplicate code
+procedure LoadFile(FileStrtPtr: word; FileNamePtr: word; LFN: byte): boolean;
 const
-  r0Addr:       byte = $02;
-  LFN:          byte = 8;
   Load:         byte = 0;
 var
   FileNameLen:  byte;
@@ -148,13 +218,67 @@ var
 begin 
   FileNameLen := StringLenNT(FileNamePtr);
   
-  // Setup call to K_SAVE
-  K_SETLFS(1, LFN, 255);
+  // Setup call to K_LOAD
+  K_SETLFS(1, LFN, 0);
   K_SETNAM(FileNameLen, FileNamePtr.low, FileNamePtr.high);
   
-  ResB := K_SAVE(Load, FileStrtPtr.low, FileStrtPtr.high);
+  K_Load(Load, FileStrtPtr.low, FileStrtPtr.high);
   
-  exit(ResB);
+  asm
+    bcc noerror
+    lda #0      ; Set ResB false
+    bcs endr
+  noerror:
+    lda #$FF    ; Set ResB true
+  endr:
+    sta ResB
+  end;
+end;
+
+// Intended to replace ' LOAD "...",8,1 '
+//
+// Params:
+// -------
+//
+// FileStrtPtr: Where to load file to in RAM
+// FileNamePtr: Where the file name string is located in RAM/ROM
+//
+// Returns:
+// --------
+//
+// ResB:        Boolean value that contains true if the file loaded,
+//              false if it failed to load.
+//
+procedure LoadFileFromSD(FileStrtPtr: word; FileNamePtr: word): boolean;
+const
+  LFN:          byte = 8;
+var
+  ResB:         boolean;
+begin 
+  ResB := LoadFile(FileStrtPtr, FileNamePtr, LFN);
+end;
+
+// Intended to replace ' LOAD "...",9,1 ', aka Load File From Disk Drive
+//
+// Params:
+// -------
+//
+// FileStrtPtr: Where to load file to in RAM
+// FileNamePtr: Where the file name string is located in RAM/ROM
+//
+// Returns:
+// --------
+//
+// ResB:        Boolean value that contains true if the file loaded,
+//              false if it failed to load.
+//
+procedure LoadFileFromFDskDrv(FileStrtPtr: word; FileNamePtr: word): boolean;
+const
+  LFN:          byte = 9;
+var
+  ResB:         boolean;
+begin 
+  ResB := LoadFile(FileStrtPtr, FileNamePtr, LFN);
 end;
 
 ///////////////////////////////////////////////////////////
@@ -162,7 +286,7 @@ end;
 /////////////////////////////////////////////////////////// 
 
 // Finds the length of NULL terminated string or 255 if no
-// NULL found.
+// NULL character found.
 procedure StringLenNT(StrPtr: word): byte;
 const
   r0Addr: byte = $02;

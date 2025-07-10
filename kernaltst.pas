@@ -10,6 +10,10 @@
 // K_SAVE
 // K_LOAD
 // K_CHROUT
+// StringLenNT
+// GoToScreenXY
+// ClearScreen
+
 
 program NewProgram;
 uses CX16Kernal;
@@ -21,75 +25,25 @@ var
   Tst3FailStr: ARRAY [] of char = 'TST3-KSAVE FAILED';
   Tst4FailStr: ARRAY [] of char = 'TST4-KLOAD FAILED';
   Tst5FailStr: ARRAY [] of char = 'TST5-CMP-LOAD-SAVE-F FAILED';
+  Tst6FailStr: ARRAY [] of char = 'TST6-STRINGLENNT FAILED';
   
   AllTestsPassStr: ARRAY [] of char = 'ALL TESTS PASSED';
   
   TstSaveFileName: ARRAY [] of char = 'TST1.BIN';
   
-  TstSaveFile: ARRAY [] of byte = (0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
-  TstLoadFile: [16]byte;
+  TstSaveFile: ARRAY [] of char = 'ABCDEFGHIJKLMNOP';
+  TstLoadFile: [17]char;
   
   AllTestsPassed: boolean;
   
   Ptr: word;
   
-  i,j,NumTstsFailed: byte;
-
-// Handy way to test K_PLOT(false,...) for free
-procedure GoToXY(x, y: byte);
-begin
-  K_PLOT_Set(x, y);
-end;   
-  
-// Could use refactoring but works for now
-procedure ClearScrX16;
-var
-  sw, sh: byte;
-begin
-  // Get screen width and height
-  asm 
-	  jsr $FFED
-    dex
-    stx sw 
-    dey
-    sty sh      
-  end; 
-  
-  GoToXY(0,0);
-  
-  for i:=0 to sh do
-    for j:=0 to sw do
-      asm 
-        lda #32
-        jsr $FFD2 
-      end; 
-    end; 
-  end; 
-  
-end;     
-
-// Print string implementation
-procedure PrintStr(StrPtr: word; StrLen: byte registerX);
-const
-  r0Addr = $0002;
-begin 
-  r0 := StrPtr;
-  
-  asm
-    ldy #0
-  loop:
-    lda (r0Addr),y
-    jsr $FFD2
-    iny 
-    dex 
-    bne loop 
-  end;
-end;  
+  i, NumTstsFailed: byte;   
 
 // Test K_CHROUT
 procedure TestK_CHROUT: boolean;
 begin 
-  GoToXY(0,0);
+  GoToScreenXY(0,0);
   for i:=0 to IntroStr.length - 1 do
     K_CHROUT(IntroStr[i]);
   end;
@@ -103,7 +57,7 @@ var
   ResMatch2: boolean;
   Ret:       RetXY;
 begin 
-  GoToXY(3, 5);
+  GoToScreenXY(3, 5);
   Ret := K_PLOT_Get;
   
   ResMatch1 := Ret.low = 3;
@@ -128,14 +82,14 @@ var
   ResB:         boolean;
 begin
   // Setup variables to call K_SAVE
-  FileStartPtr:= @TstSaveFile;
-  FileEndPtr := FileStartPtr + 15;
-  FileNamePtr:= @TstSaveFileName;
+  FileStartPtr := @TstSaveFile;
+  FileEndPtr   := FileStartPtr + 16;
+  FileNamePtr  := @TstSaveFileName;
   
   r0 := FileStartPtr;
   
   // Setup call to K_SAVE
-  K_SETLFS(1, 8, 255);
+  K_SETLFS(1, LFN, 0);
   K_SETNAM(TstSaveFileName.length, FileNamePtr.low, FileNamePtr.high);
   
   ResB := K_SAVE(r0Offset, FileEndPtr.low, FileEndPtr.high);
@@ -152,18 +106,16 @@ const
   Load:         byte = 0;
 var
   FileStartPtr: word;
-  FileEndPtr:   word;
   FileNamePtr:  word;
   ResB:         boolean;
 begin
-  // Setup variables to call K_SAVE
-  FileStartPtr:= @TstLoadFile;
-  FileEndPtr := FileStartPtr + 15;
-  FileNamePtr:= @TstSaveFileName;
+  // Setup variables to call K_LOAD
+  FileStartPtr := @TstLoadFile;
+  FileNamePtr  := @TstSaveFileName;
   
   
-  // Setup call to K_SAVE
-  K_SETLFS(1, LFN, 255);
+  // Setup call to K_LOAD
+  K_SETLFS(1, LFN, 0);
   K_SETNAM(TstSaveFileName.length, FileNamePtr.low, FileNamePtr.high);
   
   K_LOAD(Load, FileStartPtr.low, FileStartPtr.high);
@@ -183,18 +135,39 @@ end;
 // after TestK_LOAD is called.
 procedure TestLoadfEqSavef: boolean;
 begin 
-  for i:=0 to 15 do
-    if not TstSaveFile[i] = TstLoadFile[i] then
+  GoToScreenXY(1,0);
+  
+  for i:=0 to 16 do
+    if TstSaveFile[i] <> TstLoadFile[i] then
       exit(false);
+    else
+      K_CHROUT(TstLoadFile[i]);
     end; 
   end;
   
   exit(true); 
 end;
+
+// Tests to make sure StringLenNT actually
+// correctly calculates the string length
+// (not including NULL character).
+procedure TestStringLenNT: boolean;
+var 
+  Len: byte;
+begin 
+  Len := StringLenNT(@TstSaveFile);
   
+  if Len <> 16 then 
+    exit(false);
+  end;
+  
+  exit(true);
+end;
+ 
+// PROGRAM START 
 begin
   // Start by clearing the screen
-  ClearScrX16;
+  ClearScreen;
   
   // Set initial success flag state
   AllTestsPassed := true;
@@ -203,16 +176,15 @@ begin
   NumTstsFailed := 0;
 
   if not TestK_PLOT then 
-    GoToXY(NumTstsFailed + 1,0);
+    GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst1FailStr;
     PrintStr(Ptr, Tst1FailStr.length);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
-  
   if not TestK_CHROUT then   
-    GoToXY(NumTstsFailed + 1,0);
+    GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst2FailStr;
     PrintStr(Ptr, Tst2FailStr.length);
     AllTestsPassed := false;
@@ -220,7 +192,7 @@ begin
   end;
   
   if not TestK_SAVE then
-    GoToXY(NumTstsFailed + 1,0);  
+    GoToScreenXY(NumTstsFailed + 1,0);  
     Ptr := @Tst3FailStr;
     PrintStr(Ptr, Tst3FailStr.length);
     AllTestsPassed := false;
@@ -228,7 +200,7 @@ begin
   end;
   
   if not TestK_LOAD then 
-    GoToXY(NumTstsFailed + 1,0);
+    GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst4FailStr;
     PrintStr(Ptr, Tst4FailStr.length);
     AllTestsPassed := false;
@@ -236,15 +208,23 @@ begin
   end;
   
   if not TestLoadfEqSavef then 
-    GoToXY(NumTstsFailed + 1,0);
+    GoToScreenXY(NumTstsFailed + 1,0);
     Ptr := @Tst5FailStr;
     PrintStr(Ptr, Tst5FailStr.length);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
+  if not TestStringLenNT then 
+    GoToScreenXY(NumTstsFailed + 1,0);
+    Ptr := @Tst6FailStr;
+    PrintStr(Ptr, Tst6FailStr.length);
+    AllTestsPassed := false;
+    NumTstsFailed += 1;
+  end;
+  
   if AllTestsPassed then
-    GoToXY(1,0);
+    GoToScreenXY(1,0);
     Ptr := @AllTestsPassStr;
     PrintStr(Ptr, AllTestsPassStr.length);
   end; 
