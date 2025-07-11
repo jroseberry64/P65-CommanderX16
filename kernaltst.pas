@@ -13,6 +13,14 @@
 // StringLenNT
 // GoToScreenXY
 // ClearScreen
+// PrintStr
+// DOS_ExecComm
+// DOS_Scratch
+// K_CHKIN
+// K_LISTEN
+// K_SECOND
+// K_UNLSN
+// K_CLRCHN
 
 
 program NewProgram;
@@ -35,8 +43,6 @@ var
   TstLoadFile: [17]char;
   
   AllTestsPassed: boolean;
-  
-  Ptr: word;
   
   i, NumTstsFailed: byte;   
 
@@ -140,8 +146,6 @@ begin
   for i:=0 to 16 do
     if TstSaveFile[i] <> TstLoadFile[i] then
       exit(false);
-    else
-      K_CHROUT(TstLoadFile[i]);
     end; 
   end;
   
@@ -166,6 +170,18 @@ begin
   // generate an extra RTS if you don't
   exit(true);
 end;
+
+procedure TestDOS_ExecComm;
+var 
+  Cmd: ARRAY [] of char = 'CD:APPS';
+begin 
+  DOS_ExecComm(@Cmd);
+end;
+
+procedure TestDOS_Scratch;
+begin 
+  DOS_Scratch(@TstSaveFileName);
+end;
  
 // PROGRAM START 
 begin
@@ -178,58 +194,57 @@ begin
   // Set initial number of failed tests
   NumTstsFailed := 0;
 
+  // Changes directory
+  TestDOS_ExecComm;
+  
   if not TestK_PLOT then 
     GoToScreenXY(NumTstsFailed + 1,0);
-    Ptr := @Tst1FailStr;
-    PrintStr(Ptr);
+    PrintStr(@Tst1FailStr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
   if not TestK_CHROUT then   
     GoToScreenXY(NumTstsFailed + 1,0);
-    Ptr := @Tst2FailStr;
-    PrintStr(Ptr);
+    PrintStr(@Tst2FailStr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
   if not TestK_SAVE then
     GoToScreenXY(NumTstsFailed + 1,0);  
-    Ptr := @Tst3FailStr;
-    PrintStr(Ptr);
+    PrintStr(@Tst3FailStr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
   if not TestK_LOAD then 
     GoToScreenXY(NumTstsFailed + 1,0);
-    Ptr := @Tst4FailStr;
-    PrintStr(Ptr);
+    PrintStr(@Tst4FailStr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
   if not TestLoadfEqSavef then 
     GoToScreenXY(NumTstsFailed + 1,0);
-    Ptr := @Tst5FailStr;
-    PrintStr(Ptr);
+    PrintStr(@Tst5FailStr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
   if not TestStringLenNT then 
     GoToScreenXY(NumTstsFailed + 1,0);
-    Ptr := @Tst6FailStr;
-    PrintStr(Ptr);
+    PrintStr(@Tst6FailStr);
     AllTestsPassed := false;
     NumTstsFailed += 1;
   end;
   
+  // Delete test file
+  TestDOS_Scratch;
+  
   if AllTestsPassed then
     GoToScreenXY(1,0);
-    Ptr := @AllTestsPassStr;
-    PrintStr(Ptr);
+    PrintStr(@AllTestsPassStr);
   end; 
   
   asm 

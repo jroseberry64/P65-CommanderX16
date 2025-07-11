@@ -11,6 +11,9 @@
 //    back or deleted after offering alternative
 //    hand written routines.
 //
+// 3) Finish writing tests for all the routines in
+//    this file.
+//
 ////////////////////////////////////////////
 {Unit to interface with Commander X16 Kernal assembly routines}
 {$ORG $0801}
@@ -65,6 +68,8 @@ var
   K_RetAXY: RetAXY;
   K_RetXY:  RetXY;
   
+  CmdBuffer: [128]char;
+  
   // Screen/Print Functions 
   procedure GoToScreenXY(x: byte registerX; y: byte registerY);
   procedure ClearScreen;
@@ -76,6 +81,10 @@ var
   
   // String Helper Functions
   procedure StringLenNT(StrPtr: word): byte;
+  
+  // DOS Functions
+  procedure DOS_Scratch(FileStrPtr: word absolute $04);
+  procedure DOS_ExecComm(StrPtr: word absolute $02);
   
   // KERNAL HELPER FUNCTIONS
   procedure SetHighBankRAM(Bank: byte registerA);   // Open to renaming these
@@ -91,6 +100,7 @@ var
   procedure K_SETTMO(TimeoutFlag: byte registerA);
   procedure K_UNLSN;
   procedure K_SECOND(SecAddr: byte registerA);
+  procedure K_LISTEN(DeviceNum: byte registerA);
   procedure K_TALK(Dev: byte registerA);
   procedure K_TKSA(SecAddr: byte registerA);
   procedure K_UNTLK;
@@ -100,16 +110,16 @@ var
   //procedure K_READST: byte;
   procedure K_SETLFS(LFN: byte registerA; DevNum: byte registerX; Comm: byte registerY);
   procedure K_SETNAM(FNLen: byte registerA; FNAddrLo: byte registerX; FNAddrHi: byte registerY);
-  //procedure K_OPEN;
-  //procedure K_CLOSE(LF: byte registerA);
-  //procedure K_CHKIN(LF: byte registerX): byte;
-  //procedure K_CHKOUT(LF: byte registerX): byte;
-  //procedure K_CLRCHN;
+  procedure K_OPEN;
+  procedure K_CLOSE(LF: byte registerA);
+  procedure K_CHKIN(LF: byte registerX): byte;
+  procedure K_CHKOUT(LF: byte registerX): byte;
+  procedure K_CLRCHN;
   procedure K_CHRIN: char;
   procedure K_CHROUT(Chr: char registerA);
   procedure K_LOAD(LV: byte registerA; AddrStrtLo: byte registerX; AddrStrtHi: byte registerY): RetXY;
   procedure K_SAVE(ZPOffset: byte registerA; AddrEndLo: byte registerX; AddrEndHi: byte registerY): boolean;
-  //procedure K_CLALL;
+  procedure K_CLALL;
   
   // COMMODORE/X16 SYS KERNAL ROUTINES
   //procedure K_IOINIT;
@@ -213,20 +223,17 @@ end;
 //
 // None
 //
-procedure PrintStr(StrPtr: word);
-const
-  r0Addr = $02;
+procedure PrintStr(StrPtr: word absolute $02);
 begin 
-  r0 := StrPtr;
-  
   asm
     ldy #0
   loop:
-    lda (r0Addr),y
+    lda (r0),y
+    beq endr
     jsr $FFD2
-    iny 
-    dex 
+    iny  
     bne loop 
+  endr:
   end;
 end;
 
@@ -361,6 +368,133 @@ begin
     txa
   end;
 end;
+
+///////////////////////////////////////////////////////////
+// DOS Functions
+///////////////////////////////////////////////////////////
+
+// Copies command and parameters to CmdBuffer
+//
+// Params:
+// -------
+//
+// r0: Pointer to null terminated command string
+// r1: Pointer to null terminated parameter string
+//
+// Returns:
+// --------
+//
+// None.
+//
+procedure CopyToCmdBuffer(CmdPtr1: word absolute $02; CmdPtr2: word absolute $04);
+begin
+  asm 
+    ldy #0
+    ldx #0
+  loop:
+    lda (r0),y
+    beq copy_nxt
+    sta CmdBuffer,x
+    inx 
+    iny 
+    jmp loop
+  copy_nxt:
+    ldy #0
+  loop_2:
+    lda (r1),y
+    beq endr
+    sta CmdBuffer,x        
+    inx 
+    iny 
+    jmp loop_2
+  endr: 
+    sta CmdBuffer,x
+  end;
+end;
+
+procedure DOS_CD(StrPtr: word absolute $02);
+begin 
+
+end;
+
+procedure DOS_MD(StrPtr: word absolute $02);
+begin 
+
+end;
+
+procedure DOS_RD(StrPtr: word absolute $02);
+begin 
+
+end;
+
+procedure DOS_Dir;
+var 
+  cmd: char = '$';
+begin 
+  
+end;
+
+// Deletes file
+//
+// Params:
+// -------
+//
+// FileStrPtr: Pointer to string with file name
+//
+// Returns:
+// --------
+//
+// None.
+//
+procedure DOS_Scratch(FileStrPtr: word);
+var 
+  CmdStrt: [3]char = 'S:';
+begin 
+  CopyToCmdBuffer(@CmdStrt, FileStrPtr);
+  DOS_ExecComm(@CmdBuffer);
+end;
+
+// Executes CBM-DOS command
+//
+// Params:
+// -------
+//
+// StrPtr (r0): Pointer to string with command
+//
+// Returns:
+// --------
+//
+// None.
+//
+procedure DOS_ExecComm(StrPtr: word absolute $02);
+begin 
+  asm
+    ldy #0 
+	  lda (r0),y
+    bne start 
+    rts       
+  start:
+  end;
+  
+  K_CHKIN(15); 
+  K_LISTEN(8);
+  K_SECOND($6F);
+  
+  asm
+    ldy #0 
+  loop:
+    lda (r0),Y           
+    beq endr  
+    jsr $FFA8            
+    iny                   
+    jmp loop        
+  endr:
+  end;
+  
+  K_UNLSN;
+  K_CLRCHN;
+end;
+
 
 ///////////////////////////////////////////////////////////
 // KERNAL HELPER FUNCTIONS
